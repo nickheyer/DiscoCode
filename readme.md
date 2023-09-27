@@ -1,5 +1,7 @@
 # DiscoCode
 
+![image](https://github.com/nickheyer/DiscoCode/assets/60236014/64f05226-3d9f-42e8-b5b5-94465413140f)
+
 ### Your friendly neighborhood containerized code execution web server and discord bot.
 Safe and secure. Powered by Piston. Includes a REST API for code running, user admin, and database management.
 
