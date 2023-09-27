@@ -1,6 +1,7 @@
 # DiscoCode
 
-Welcome to DiscoCode, a playful concoction of "Discord" and "Code"! 🎉 DiscoCode is a containerized code execution web server and a Discord bot that allows you to run code directly from Discord in over 25 languages!
+### Your friendly neighborhood containerized code execution web server and discord bot.
+Safe and secure. Powered by Piston. Includes a REST API for code running, user admin, and database management.
 
 
 <hr />
@@ -38,9 +39,9 @@ docker image pull nickheyer/discocode_rpi:latest
 ##### Run Docker Container
 
 ```bash
-docker run -d -p 5454:5454 --name discocode nickheyer/discocode
+docker run -d -p 6565:6565 --name discocode nickheyer/discocode
 ```
-##### The server within the docker container can be accessed locally at [http://127.0.0.1:5454](http://127.0.0.1:5454)
+##### The server within the docker container can be accessed locally at [http://127.0.0.1:6565](http://127.0.0.1:6565)
 
 <hr />
 <br />
@@ -89,6 +90,52 @@ sh ./run.sh
 
 <hr />
 <br />
+
+
+## General Instructions
+
+
+### Accessing The Web-UI
+
+#### *You will need to get the IP address of the computer hosting DiscoCode. On Windows, you would typically type `ipconfig` on the host machine and look for your `ipv4`.*
+
+#### *If you would like to access DiscoCode remotely, as in not on the same network as the host machine, you will need to do some port forwarding to expose port 6565 to the internet. Run into trouble? Feel free to join the [Discord](https://discord.com/invite/6Z9yKTbsrP)!*
+
+<hr />
+
+### Configuration
+
+#### *DiscoCode requires a small amount of configuration before you can begin making requests. Discord Token for example.*
+
+<hr />
+
+#### *To get your Discord Token, go to the "bot" tab in your developer portal. You may need to click "reset Token" and/or enter authentication code if you have 2FA enabled. Make sure to enable all `Privileged Gateway Intents`)*
+![Peek 2023-05-22 22-06](https://github.com/nickheyer/DiscoCode/assets/60236014/b197418d-ef70-4a74-9b0d-d43d6802f45b)
+
+#### *If you haven't already, now is also a good time to invite the bot to the server or servers you would like to monitor, you can do that via the Discord Developer Portal. Admin access is the only level we have tested. Anything less may result in errors.*
+![Peek 2023-04-07 20-01](https://user-images.githubusercontent.com/60236014/230700480-36a89984-59ea-4c65-a269-1d4e34230872.gif)
+
+
+<hr />
+
+<br />
+
+## Usage
+
+
+### Add Yourself As An Admin
+
+In the Web UI, click "Users". Add yourself as a user, but before confirming, change "Non-Admin" to "Admin". Your username should match your Discord username. These are automatically populated in the search bar when the bot is running and can see other users.
+
+
+### Test That The Bot Is Running
+
+Type the following into a discord chat message that the bot can see:
+
+```
+!dc help
+```
+
 
 ## Features 🌟
 
