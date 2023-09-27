@@ -1,0 +1,6 @@
+/venv
+*.tldr
+__pycache__/
+deploy/
+*.sqlite3
+auto_install_update.sh

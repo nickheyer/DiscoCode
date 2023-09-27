@@ -1,0 +1,5 @@
+/venv
+*.tldr
+__pycache__/
+deploy/
+*.sqlite3

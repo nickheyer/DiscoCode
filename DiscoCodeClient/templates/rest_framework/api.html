@@ -1,0 +1,12 @@
+{% extends "rest_framework/base.html" %}
+
+
+{% block title %}
+DiscoCode REST API
+{% endblock %}
+
+{% block style %}
+{{ block.super }}
+{% load static %}
+<link rel="shortcut icon" type="image/png" href="{% static 'DiscoCodeClient/images/favicon.png' %}" />
+{% endblock %}
