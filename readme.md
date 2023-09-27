@@ -50,6 +50,7 @@ docker run -d -p 6565:6565 --name discocode nickheyer/discocode
 ## Installation From Source (Not Recommended)
 
 ### Prerequisites, Dependencies, and Requirements
+
 **_NOTE:_**  Installation from source using Windows has been deprecated with the introduction of web-socket functionality, gevent, and other integral parts of this application that are not currently supported by Microsoft.
 
 1. Python - Download and install Python [here](https://www.python.org/downloads/). Make sure that you choose "Add Python to environmental variables" during installation.
@@ -139,11 +140,15 @@ Type the following into a discord chat message that the bot can see:
 
 ## Features 🌟
 
-    **Multi-Language Support:** Execute code in a plethora of languages - from mainstream ones like Python, Java, C++, JavaScript, to esoteric ones like Rockstar, Cow, and Lolcode.
-    **Containerized Execution:** Ensures safe and isolated code execution environment.
-    **Discord Integration:** Directly execute code from Discord with an easy-to-use command system.
-    **User Roles and Authorization:** Manage permissions with roles like admin, user, unrestricted, and owner.
-    **User Debug Information:** Quickly access user roles and registered commands.
+  - *Multi-Language Support:* Execute code in a plethora of languages - from mainstream ones like Python, Java, C++, JavaScript, to esoteric ones like Rockstar, Cow, and Lolcode.
+
+  - *Containerized Execution:* Ensures safe and isolated code execution environment.
+
+  - *Discord Integration:* Directly execute code from Discord with an easy-to-use command system.
+
+  - *User Roles and Authorization:* Manage permissions with roles like admin, user, unrestricted, and owner.
+  
+  - *User Debug Information:* Quickly access user roles and registered commands.
 
 ## How to Use 📘
 To execute code, use the prefix for code execution ($ by default), followed by three backticks and the language that you would like to code in. Then, on a new line below that, you can start writing code. End it with a new line and another three backticks.
