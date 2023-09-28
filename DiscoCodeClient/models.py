@@ -8,7 +8,7 @@ import os
 class Configuration(models.Model):
     prefix_keyword = models.CharField("Chat-Prefix For Commands", max_length=255, null=True, default="!dc")
     alt_prefix = models.CharField("Prefix For Code Execution Commands", max_length=255, null=True, default="$")
-    discord_token = models.CharField("Discord Token", max_length=255, null=True, default="")
+    discord_token = models.CharField("Discord Token", max_length=255, blank=True, default="")
 
     session_timeout = models.IntegerField("Session Timeout", null=True, default=60)
 
