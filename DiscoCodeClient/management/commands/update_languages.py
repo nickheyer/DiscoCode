@@ -18,7 +18,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR('Unexpected API response format'))
                 return
 
-            running_aliases = []
+            running_aliases = set()
             for lang_data in language_list:
                 if not isinstance(lang_data, dict) or 'language' not in lang_data:
                     self.stdout.write(self.style.ERROR('Unexpected language data format'))
@@ -30,8 +30,9 @@ class Command(BaseCommand):
                 aliases = lang_data.get('aliases', [])
                 aliases.append(language_name)
                 for alias in aliases:
-                    if alias not in language.aliases and alias not in running_aliases:
+                    if alias not in language.aliases and alias not in running_aliases and ' ' not in alias:
                         language.aliases.append(alias)
+                        running_aliases.add(alias)
 
                 language.version = lang_data.get('version')
                 language.is_enabled = True

@@ -80,7 +80,6 @@ class MessageHandler:
             )
         else:
             return False
-        print(self.split_message)
         return len(self.split_message) > 1
 
     def __parse_command(self):
@@ -89,7 +88,6 @@ class MessageHandler:
         else:
             registry = CommandRegistry()
             cmd_str = self.split_message[1].lower().strip()
-            print(cmd_str)
             cmd = registry.get(cmd_str)
             if cmd and (not self.alt_prefix_used or cmd.alt_prefix):
                 self.cmd_str = cmd_str

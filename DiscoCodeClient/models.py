@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.core.validators import MaxValueValidator
 from django.utils.timezone import now
 
 import os
@@ -15,7 +16,11 @@ class Configuration(models.Model):
     is_debug = models.BooleanField("Send Debug Message On Error", default=False)
     runtime_endpoint = models.CharField("Query Runtime Endpoint", max_length=255, null=True, default="https://emkc.org/api/v2/piston/runtimes")
     exec_endpoint = models.CharField("Code Execution Endpoint", max_length=255, null=True, default="https://emkc.org/api/v2/piston/execute")
+    max_stdout_len = models.IntegerField("Maximum Length of Execution Response", default=512, validators=[MaxValueValidator(900, 'Discord message character limit exceeded - (Max set to 900).')])
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 class State(models.Model):
     discord_state = models.BooleanField(default=False)
@@ -26,7 +31,7 @@ class State(models.Model):
 
 class ErrLog(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    entry = models.CharField(max_length=2048, default="Error Occured")
+    entry = models.TextField(default="Error Occured")
 
 
 class EventLog(models.Model):

@@ -57,11 +57,13 @@ class CommandRegistry:
     def all(self):
         if not self.commands:
             return []
-        commands_ret = self.commands.values()
-        return list(set(commands_ret))
+        commands_ret = list(set(self.commands.values()))
+        sorted_commands = sorted(commands_ret, key=lambda x: x.name)
+        return sorted_commands
     
     def alts(self):
         if not self.alt_commands:
             return []
-        commands_ret = self.alt_commands.values()
-        return list(set(commands_ret))
+        commands_ret = list(set(self.alt_commands.values()))
+        sorted_commands = sorted(commands_ret, key=lambda x: x.name)
+        return sorted_commands

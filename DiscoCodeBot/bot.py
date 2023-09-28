@@ -146,10 +146,10 @@ class DiscordBot:
     async def change_presence(self, presence):
         await self.client.change_presence(
             activity=discord.Activity(
-                type=discord.ActivityType.watching, name=f"& {presence.lower()}"
+                type=discord.ActivityType.listening, name=presence
             )
         )
-        await update_state({"current_activity": presence})
+        await update_state({"current_activity": f"Bot: 'Listening to {presence}'"})
         await self.update_client()
 
     def import_commands(self, directory="commands"):

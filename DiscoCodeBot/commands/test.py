@@ -1,10 +1,12 @@
 from DiscoCodeBot.base_command import Command
+from DiscoCodeBot.managers.ui_manager import ListCommands
+from DiscoCodeBot.registry import CommandRegistry
 
 class TestCommand(Command):
     name = "test"
-    permissions = ["owner", "developer"]
     aliases = ["test"]
-    description = "Confirm bot is on and listening"
+    permissions = ["admin"]
+    description = "Test that bot is recognizing commands."
 
     async def execute(self, message, ctx):
-        await message.channel.send('Testing!')
+        raise Exception('TEST ERROR')

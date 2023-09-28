@@ -26,6 +26,19 @@
   background-color: #16191d !important;
 }
 
+.text-inp-toggle {
+  background-color:#16191d !important;
+  border-color:#966fd6 !important;
+  border-width:2px !important;
+  margin-top:25% !important;
+}
+
+.borderless-checkbox {
+  border: 0 !important;
+  box-shadow: None !important;
+  margin: 0 !important;
+}
+
 #user-token-data:read-only {
   /* outline: none !important;
   box-shadow: none !important; */

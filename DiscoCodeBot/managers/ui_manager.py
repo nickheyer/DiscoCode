@@ -6,7 +6,8 @@ import json
 from DiscoCodeClient.utils import (
     eval_user_roles,
     get_users_in_server,
-    get_user
+    get_user,
+    get_lang
 )
 
 from DiscoCodeBot.managers.permission_manager import requires_admin
@@ -205,13 +206,12 @@ class ApproveRequest(discord.ui.View):
 
 
 class ListCommands:
-    def __init__(self, context, command_classes, alt_classes):
+    def __init__(self, context, command_classes):
         self.context = context
         self.config = context.config
         self.prefix = self.config.prefix_keyword
         self.response = context.message
         self.commands = command_classes
-        self.alts = alt_classes
         self.user = context.message.author
         self.user_str = str(self.user)
         self.embed = None
@@ -250,21 +250,6 @@ class ListCommands:
                     name=f"{name} [*{aliases}*]", value=field_text, inline=False
                 )
 
-        if self.alts:
-            alt_text = f"Usage:\n```{self.config.alt_prefix}`​`​`<language-name>\n<code-to-execute>\n`​`​`​​\n```"
-            embed.add_field(
-              name="Code Execution", value=alt_text, inline=False
-            )
-
-            lang_text = ''
-            for alt_cls in self.alts:
-                lang_text += f"*{alt_cls.name}*: {'✔' if alt_cls.lang.is_enabled else '✖'}\n"
-                print(alt_cls.name)
-
-            embed.add_field(
-                  name='Language Choices', value=lang_text, inline=False
-            )
-
         if _debug:
             information_field = f'Username: `{self.user_str}`\nUser Roles: `{"`, `".join(user_roles)}`\nCommands Registered: `{len(self.commands)}`'
             embed.add_field(name="User Debug Information", value=information_field, inline=False)
@@ -272,26 +257,88 @@ class ListCommands:
         self.embed = embed
         return embed
 
+class ListLanguages:
+    def __init__(self, context, command_classes, commands_per_embed=10):
+        self.context = context
+        self.config = context.config
+        self.prefix = self.config.alt_prefix
+        self.response = context.message
+        self.commands = command_classes
+        self.user = context.message.author
+        self.user_str = str(self.user)
+        self.commands_per_embed = commands_per_embed
 
-class JSONButtonView(discord.ui.View):
-    def __init__(self, output):
+    async def generate_embeds(self):
+        embeds = []
+        for i in range(0, len(self.commands), self.commands_per_embed):
+            embed = discord.Embed(
+                title="Executable Languages",
+                description=f"\n__Example Usage__:\n\n{self.prefix}\```<name of language or alias>\n<your code>\n\```\n\n__List of available languages__:\n\n",
+                color=self.user.color,
+            )
+
+            cmd_group = self.commands[i:i + self.commands_per_embed]
+            for command_cls in cmd_group:
+                lang = await get_lang(command_cls.name)
+                name = command_cls.name
+                aliases = "*, *".join(command_cls.aliases)
+                description = command_cls.description
+                field_text = f"Description: `{description}`\n" if description else ""
+                field_text += f"Aliases: *{aliases}*\n"
+                embed.add_field(
+                    name=f"{name} {'✖' if not lang or not lang.is_enabled else '✔'}", value=field_text, inline=False
+                )
+
+            embed.set_footer(text=f"Displaying {i + 1}-{min(len(self.commands), i + self.commands_per_embed)} of {len(self.commands)} languages")
+
+            embeds.append(embed)
+        
+        return embeds
+
+
+class OutputBtnView(discord.ui.View):
+    def __init__(self, ctx, output):
         super().__init__()
         self.output = output
+        self.ctx = ctx
 
     async def interaction_check(self, interaction: discord.Interaction):
         return True
 
-    @discord.ui.button(label="Generate JSON", custom_id="json_generator")
+    @discord.ui.button(label="Generate JSON", custom_id="json_generator", style=discord.ButtonStyle.green)
     async def json_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         file = discord.File(fp=io.BytesIO(json.dumps(self.output, indent=4).encode()), filename="output.json")
         await interaction.response.send_message("Here is your JSON file:", file=file, ephemeral=True)
+    
+    @discord.ui.button(label="See More Languages...", custom_id="see_more", style=discord.ButtonStyle.blurple)
+    async def more_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        lang_cmd = self.ctx.bot.registry.get('lang')
+        await lang_cmd.execute(self.ctx.message, self.ctx)
+        await interaction.response.edit_message(content=interaction.message.content, embeds=interaction.message.embeds, view=None)
 
-def trunc(out, max = 1000):
-    length = len(out)
-    if length > max:
-        return f"{out[:max - 3]}..."
-    else:
-        return out
+
+class PaginatedView(discord.ui.View):
+    def __init__(self, ctx, embeds):
+        super().__init__()
+        self.embeds = embeds
+        self.ctx = ctx
+        self.user = ctx.message.author
+        self.current_page = 0
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user == self.user
+
+    @discord.ui.button(label="Previous", custom_id="paginate_next", style=discord.ButtonStyle.blurple)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page > 0:
+            self.current_page -= 1
+            await interaction.response.edit_message(embed=self.embeds[self.current_page])
+
+    @discord.ui.button(label="Next", custom_id="paginate_prev", style=discord.ButtonStyle.blurple)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page < len(self.embeds) - 1:
+            self.current_page += 1
+            await interaction.response.edit_message(embed=self.embeds[self.current_page])
 
 class ReadOutput:
     def __init__(self, context, output):
@@ -305,6 +352,14 @@ class ReadOutput:
         self.return_code = self.results.get('code', 0)
         self.embed = None
 
+    def trunc(self, out):
+      max_len = self.config.max_stdout_len
+      length = len(out)
+      if length > max_len:
+          return f"{out[:max_len - 3]}..."
+      else:
+          return out
+      
     async def generate_embed(self):
         if self.results.get("stderr"):
             embed_color = discord.Color.red()
@@ -321,14 +376,14 @@ class ReadOutput:
         embed.add_field(name='Version', value=f'```{self.output.get("version", "N/A")}```', inline=True)
         
         if self.compile_results:
-            compile_stderr = trunc(self.compile_results.get('stderr', '').strip())
+            compile_stderr = self.trunc(self.compile_results.get('stderr', '').strip())
             if compile_stderr:
-                embed.add_field(name='Compile Errors/Warnings', value=f'```diff\n-{trunc(compile_stderr)}\n```', inline=False)
+                embed.add_field(name='Compile Errors/Warnings', value=f'```diff\n-{self.trunc(compile_stderr)}\n```', inline=False)
                 
         if self.results.get("stderr"):
-            embed.add_field(name='Run-time Error', value=f'```diff\n-{trunc(self.results.get("stderr", "Error Occurred"))}\n```', inline=False)
+            embed.add_field(name='Run-time Error', value=f'```diff\n-{self.trunc(self.results.get("stderr", "Error Occurred"))}\n```', inline=False)
         if self.results.get("stdout"):
-            embed.add_field(name='Output', value=f'```{trunc(self.results.get("stdout", "No results"))}```', inline=False)
+            embed.add_field(name='Output', value=f'```{self.trunc(self.results.get("stdout", "No results"))}```', inline=False)
 
         embed.set_footer(text=f'Requested by {self.user.name}', icon_url=self.user.display_avatar)
 

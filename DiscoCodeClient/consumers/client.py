@@ -14,14 +14,17 @@ from DiscoCodeBot.controller import (
 )
 
 from DiscoCodeBot.bot import DiscordBot
+from DiscoCodeBot.dynamic import generate_commands
 
 from DiscoCodeClient.utils import (
     get_verbose_dict,
     get_dict,
     get_logs,
+    add_log,
     get_users_dict,
     add_refresh_log,
     update_config,
+    update_langs,
     get_config,
     add_user,
     edit_user,
@@ -34,7 +37,8 @@ from DiscoCodeClient.utils import (
     get_users_list,
     get_all_user_servers,
     change_bot_state,
-    validate_discord_token
+    validate_discord_token,
+    get_dicts
 )
 
 
@@ -75,6 +79,7 @@ class ClientConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
+
         event = text_data_json.get("event")
         data = text_data_json.get("data")
         callback_id = data.get("callbackId")
@@ -108,6 +113,7 @@ class ClientConsumer(AsyncWebsocketConsumer):
                 "state": await get_dict("State"),
                 "log": await get_logs(100),
                 "users": await get_users_dict(),
+                "languages": await get_dicts("Language")
             },
         }
 
@@ -141,6 +147,13 @@ class ClientConsumer(AsyncWebsocketConsumer):
     @event_handler("update_config")
     async def update_config(self, data=None, callback_id=None):
         response_data = await update_config(data)
+        
+        possible_err = response_data.get('error')
+        if possible_err:
+          await self.emit({"event": "config_updated", "data": {"error": str(possible_err)}})
+          await self.update_client()
+          return
+
         if len(response_data.get("changed", [])) > 0:
             verbose_config = await get_verbose_dict("Configuration")
             verbose_names = verbose_config.get("verbose")
@@ -155,6 +168,25 @@ class ClientConsumer(AsyncWebsocketConsumer):
         if callback_id:
             response_data["callbackId"] = callback_id
             await self.emit({"event": "config_updated", "data": response_data})
+
+    @event_handler("update_langs")
+    async def update_langs(self, data=None, callback_id=None):
+        response_data = await update_langs(data.get('langConfig', []))
+        possible_err = response_data.get('error')
+        if callback_id:
+          prepared_response = {'callbackId': callback_id}
+          if possible_err:
+            prepared_response['data'] = {"error": str(possible_err)}
+            await self.emit(prepared_response)
+
+        config = await get_config()
+        if config.is_debug:
+            changes = response_data.get('changes', [])
+            for change in changes:
+                await add_log(f"[CLIENT] {change}")
+
+        await self.update_client()
+        DiscordBot().registry.register(await generate_commands(), alt=True)
 
     @event_handler("add_user_from_client")
     async def add_user_from_client(self, data=None, callback_id=None):
@@ -344,5 +376,10 @@ class ClientConsumer(AsyncWebsocketConsumer):
                 {"callbackId": callback_id, "data": {"error": ". ".join(errors)}}
             )
         else:
-            await self.emit({"callbackId": callback_id, "data": {"success": True}})
-            await self.update_config(config)  # Saving on success
+            try:
+                await self.update_config(config)
+                await self.emit({"callbackId": callback_id, "data": {"success": True}})
+            except Exception as e:
+                await self.emit(
+                    {"callbackId": callback_id, "data": {"error": str(e)}}
+                )

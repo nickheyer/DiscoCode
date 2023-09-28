@@ -3,7 +3,8 @@ import traceback
 from io import StringIO
 
 from DiscoCodeClient.utils import (
-    get_config as config
+    get_config as config,
+    add_err_log
 )
 
 from DiscoCodeBot.parser import (
@@ -24,7 +25,8 @@ async def on_ready(bot):
     status = f"CONNECTED WITH {bot.client.user}"
     await bot.get_servers()
     await bot.send_log(status)
-    await bot.change_presence("Waiting for input...")
+    config_cls = await config()
+    await bot.change_presence(f"/help & {config_cls.prefix_keyword} help")
     await bot.tree.sync(guild=None)
     await bot.emit(
         {"event": "bot_on_finished", "data": {"success": True, "bot_name": "discord"}}
@@ -55,6 +57,7 @@ async def on_error(bot, *args):
     err = traceback.format_exc()
     channel = args[0].channel
     report_content = StringIO(str(err))
+    await add_err_log(str(err))
     config_cls = await config()
     if config_cls.is_debug:
         embeded = discord.Embed(

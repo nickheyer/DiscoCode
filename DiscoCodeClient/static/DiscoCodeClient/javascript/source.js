@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
     }
 
     onClose() {
-        // reconnection logic gonna go here
+        // reconnection logic eventually
         
     }
 
@@ -101,6 +101,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
     updateCurrentStatus(data.state);
     updateSwitches(data.state);
     updateConfigFields(data.config);
+    updateLangFields(data.languages);
     updateLog(data.log);
     updateUsers(data.users);
   }); // how rude
@@ -244,6 +245,66 @@ document.addEventListener("DOMContentLoaded", (event) => {
     });
   };
 
+
+  // Generate a configuration field for text input
+  const generateLanguageConfig = (
+    parentTag,
+    lang
+  ) => {
+    parentTag.innerHTML += `
+    <div class="mb-3">
+        <div class="input-group">
+            <div class="form-floating flex-grow-1">
+                <input type="text" class="form-control input-format-1 input-format-config" data-id="${lang.id}" id="${lang.language}-aliases" name="language-fields" placeholder="${lang.language}"
+                aria-label="${lang.language}" value="${lang.aliases}">
+                <label for="${lang.language}-aliases">${lang.language}</label>
+            </div>
+            <div class="input-group-append">
+                <label class="input-group-text text-inp-toggle" for="${lang.language}-enabled">
+                    <input class="form-check-input input-format-1 borderless-checkbox" type="checkbox" role="switch" data-id="${lang.id}" name="language-fields" id="${lang.language}-enabled" 
+                    ${lang.is_enabled ? "checked" : ""}>
+                </label>
+            </div>
+        </div>
+    </div>`;
+  };
+
+  const langContainer = document.getElementById('lang-configuration');
+  const updateLangFields = (langs) => {
+    langContainer.innerHTML = '';
+    _.forEach(langs, (lang) => generateLanguageConfig(langContainer, lang))
+  }
+
+  const getLangValues = () => {
+    const langInputs = document.getElementsByName("language-fields");
+    const preparedArr = [];
+
+    langInputs.forEach((fieldInput) => {
+      const dbId = $(fieldInput).data("id")
+      const preparedDataInd = _.findIndex(preparedArr, { id: dbId });
+
+      let preparedData;
+      if (preparedDataInd === -1) {
+        preparedData = { id: dbId };
+      } else {
+        preparedData = preparedArr[preparedDataInd];
+      }
+      if (fieldInput.type === "checkbox") {
+        preparedData.is_enabled = fieldInput.checked;
+      } else {
+        preparedData.aliases = _.words(fieldInput.value, /[^,\s]+/g);
+      }
+
+      if (preparedDataInd === -1) {
+        preparedArr.push(preparedData)
+      } else {
+        preparedArr[preparedDataInd] = preparedData;
+      }
+    });
+
+    return preparedArr;
+  }
+
   // Gets all the values from the configuration form, packs them into an object
   const getConfigFromFields = () => {
     const fieldData = document.getElementsByName("cred-form-field");
@@ -262,13 +323,29 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
   // Sends that object (look up) back to the server
   const saveConfigInFields = () => {
-    const data = getConfigFromFields();
-    socket.emit("update_config", data);
+    const fieldData = getConfigFromFields();
+    socket.emit("update_config", fieldData, (data) => {
+      if (data.error) {
+        alert(data.error)
+      }
+    });
   };
+
+  // Sends that object (look up) back to the server
+  const saveLangsInFields = () => {
+    const langData = getLangValues();
+    socket.emit("update_langs", { langConfig: langData }, (data) => {
+      if (data.error) {
+        alert(data.error)
+      }
+    });
+  };
+
 
   // When save button is clicked, send back configs
   saveButton.onclick = (event) => {
     saveConfigInFields();
+    saveLangsInFields();
   };
 
   // ---- CONNECTION TESTS -----
@@ -713,7 +790,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
   };
 
   // Filter user management table
-  $(userFilterInput).on("keyup", function () {
+  $(userFilterInput).on("keydown", function () {
     const value = $(this).val().toLowerCase();
     userBody.scrollTo({
       top: 0,

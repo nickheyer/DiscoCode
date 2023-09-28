@@ -20,7 +20,8 @@ from DiscoCodeClient.models import (
     ErrLog,
     EventLog,
     User,
-    DiscordServer
+    DiscordServer,
+    Language
 )
 
 style = color_style()
@@ -58,11 +59,70 @@ def update_config(data):
             if str(attribute) != str(v) and (attribute or v):
                 changed.append(k)
             setattr(config, k, v)
-    config.save()
+    try:
+        config.save()
+    except Exception as e:
+        return {'error': e}
     config_dict = model_to_dict(config)
     config_dict["changed"] = changed
     return config_dict
 
+def get_langs_sync():
+    try:
+        return Language.objects.all()
+    except ObjectDoesNotExist:
+        return []
+
+@database_sync_to_async
+def get_langs():
+  return get_langs_sync()
+
+@database_sync_to_async
+def get_lang(name):
+    try:
+        return Language.objects.filter(language=name).first()
+    except ObjectDoesNotExist:
+        return None
+
+@database_sync_to_async
+def update_langs(data):
+    changes = []
+    for lang in data:
+
+        lang_id = lang.get('id')
+        if not lang_id:
+            continue
+        
+        lang_inst = Language.objects.filter(id=lang_id).first()
+        if not lang_inst:
+            continue
+
+        lang_aliases = lang.get('aliases')
+        if lang_aliases and isinstance(lang_aliases, list):
+          inst_aliases_set = set(lang_inst.aliases)
+          inc_aliases_set = set(lang_aliases)
+
+          for inc in inc_aliases_set:
+              if ' ' in inc:
+                  inc_aliases_set.remove(inc)
+          if inst_aliases_set.symmetric_difference(inc_aliases_set):
+            changes.append(f'{lang_inst.language}: {lang_inst.aliases} -> {lang_aliases}')
+            lang_inst.aliases = list(inc_aliases_set)
+            
+
+        
+        lang_enabled = lang.get('is_enabled')
+        if lang_enabled is not None and isinstance(lang_enabled, bool):
+            if lang_inst.is_enabled != lang_enabled:
+                changes.append(f'{lang_inst.language}: {lang_inst.is_enabled} -> {lang_enabled}')
+                lang_inst.is_enabled = lang_enabled
+                
+        try:
+            lang_inst.save()
+        except Exception as e:
+            print(e)
+            return {'error': e}
+    return { 'success': True, 'changes': changes }
 
 def get_state_sync():
     try:
@@ -167,6 +227,23 @@ def get_dict(model_str):
         print(f"An error occurred: {e}")
         return {}
 
+@database_sync_to_async
+def get_dicts(model_str):
+    try:
+        found_model = apps.get_model("DiscoCodeClient", model_str)
+    except LookupError:
+        return {}
+    try:
+        serialized = []
+        instances = found_model.objects.all()
+        for inst in instances:
+            serialized.append(model_to_dict(inst))
+        
+        return serialized
+  
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
 
 def get_verbose_dict_sync(model_str):
     try:
@@ -544,6 +621,9 @@ def reset_database(choices):
         # Deleting users will likely also delete related models due to cascading
         User.objects.all().delete()
         DiscordServer.objects.all().delete()
+    if choices.get("Language", False):
+        # Deleting users will likely also delete related models due to cascading
+        Language.objects.all().delete()
 
 
 @database_sync_to_async
@@ -564,12 +644,13 @@ def export_data(choices):
     models_to_dump = []
     if "Configuration" in choices:
         models_to_dump.append("DiscoCodeClient.Configuration")
+        models_to_dump.append("DiscoCodeClient.Language")
     if "EventLog" in choices:
         models_to_dump.append("DiscoCodeClient.EventLog")
         models_to_dump.append("DiscoCodeClient.ErrLog")
     if "User" in choices:
-        models_to_dump.append("DiscoCodeClient.User")
         models_to_dump.append("DiscoCodeClient.DiscordServer")
+        models_to_dump.append("DiscoCodeClient.User")
 
     buffer = io.StringIO()
     call_command("dumpdata", *models_to_dump, stdout=buffer, format="json")
@@ -636,6 +717,10 @@ def handle_stderr(pipe, logger=None):
             error = ErrLog(entry=log)
             error.save()
 
+@database_sync_to_async
+def add_err_log(entry):
+    error = ErrLog(entry=entry)
+    error.save()
 
 @database_sync_to_async
 def change_bot_state(current_state):

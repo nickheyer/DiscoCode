@@ -11,7 +11,6 @@ class HelpCommand(Command):
     async def execute(self, message, ctx):
         registry = CommandRegistry()
         all_commands = registry.all()
-        alts = registry.alts()
-        commands = ListCommands(ctx, all_commands, alts)
+        commands = ListCommands(ctx, all_commands)
         embed = await commands.generate_embed()
         await message.reply(embed=embed)
